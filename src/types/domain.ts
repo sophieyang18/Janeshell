@@ -130,6 +130,12 @@ export const recordTypes: RecordType[] = ["体重", "用餐", "运动"];
 
 export const companionPanels: CompanionPanel[] = ["聊天", "调戏", "送礼物", "查看属性"];
 
+export const companionFigureSrc: Record<CompanionCategory, string> = {
+  帅哥: "/companions/male.jpeg",
+  美女: "/companions/female.jpeg",
+  萌宠: "/companions/pet.png",
+};
+
 export const defaultOnboardingDraft: OnboardingDraft = {
   companion: {
     category: "帅哥",

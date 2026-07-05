@@ -1,25 +1,49 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Mic, Phone, Smile, Video } from "lucide-react";
 
 import { GlassCard, PrimaryButton, SectionTitle, Tag } from "@/components/common/ui";
 import { useAppStore } from "@/store/use-app-store";
-import { getCompanionTheme } from "@/types/domain";
+import { apiClient } from "@/services/api";
+import { companionFigureSrc, getCompanionTheme, type CompanionCategory } from "@/types/domain";
 
 const quickEmoji = ["🥺", "😭", "😤", "💪", "🥗", "🏃", "🔥", "🫶"];
 
 export function ChatPanel({ embedded = false }: { embedded?: boolean }) {
   const messages = useAppStore((state) => state.messages);
   const sendMessage = useAppStore((state) => state.sendMessage);
+  const userId = useAppStore((state) => state.userId);
   const profile = useAppStore((state) => state.profile);
   const companionProfile = useAppStore((state) => state.companionProfile);
   const [draft, setDraft] = useState("");
   const [voiceMode, setVoiceMode] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [callStatus, setCallStatus] = useState("");
+  const messageListRef = useRef<HTMLDivElement | null>(null);
   const theme = getCompanionTheme(profile?.companion.category ?? "帅哥", profile?.gender);
+  const companionCategory = profile?.companion.category ?? "帅哥";
   const titleTone = resolveChatTone();
   const darkTools = titleTone === "dark";
 
   const sortedMessages = useMemo(() => [...messages], [messages]);
+  const latestMessageId = sortedMessages.at(-1)?.id;
+
+  useEffect(() => {
+    const list = messageListRef.current;
+    if (!list) return;
+
+    const scrollToBottom = () => {
+      list.scrollTop = list.scrollHeight;
+    };
+
+    scrollToBottom();
+    const frameId = requestAnimationFrame(scrollToBottom);
+    const timerId = window.setTimeout(scrollToBottom, 120);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.clearTimeout(timerId);
+    };
+  }, [latestMessageId, sortedMessages.length]);
 
   return (
     <GlassCard
@@ -29,22 +53,41 @@ export function ChatPanel({ embedded = false }: { embedded?: boolean }) {
       <div className="flex items-center justify-between gap-4 border-b pb-4" style={{ borderColor: theme.palette.shellCardBorder }}>
         <SectionTitle title={`${companionProfile.name} 的聊天窗`} subtitle="这里保留微信的使用习惯，但气质跟着搭子主题走。" tone={titleTone} />
         <div className="flex gap-2">
-          <IconButton label="语音通话" dark={darkTools}>
+          <IconButton label="语音通话" dark={darkTools} onClick={() => void startCall("voice")}>
             <Phone className="size-4" />
           </IconButton>
-          <IconButton label="视频通话" dark={darkTools}>
+          <IconButton label="视频通话" dark={darkTools} onClick={() => void startCall("video")}>
             <Video className="size-4" />
           </IconButton>
         </div>
       </div>
 
-      <div className="scrollbar-thin mt-5 min-h-0 flex-1 overflow-y-auto rounded-[26px] p-5" style={{ background: theme.palette.previewCardBg }}>
+      {callStatus ? (
+        <div className="mt-4 rounded-[22px] px-4 py-3 text-sm font-semibold" style={{ background: theme.palette.accentSoft, color: theme.palette.previewText }}>
+          {callStatus}
+        </div>
+      ) : null}
+
+      <div
+        ref={messageListRef}
+        data-chat-scroll-container="true"
+        className="scrollbar-thin mt-5 min-h-0 flex-1 overflow-y-auto rounded-[26px] p-5"
+        style={{ background: theme.palette.previewCardBg }}
+      >
         <div className="space-y-4">
           {sortedMessages.map((message) => (
             <div key={message.id} className={`flex ${message.sender === "me" ? "justify-end" : "justify-start"} gap-3`}>
               {message.sender === "companion" ? (
-                <div className="flex size-10 items-center justify-center rounded-2xl text-lg font-semibold text-white" style={{ background: theme.palette.orb }}>
-                  {companionProfile.name.slice(0, 1)}
+                <div
+                  className="size-11 shrink-0 overflow-hidden rounded-[18px] border"
+                  style={{ borderColor: theme.palette.shellCardBorder, background: theme.palette.stageCardBg }}
+                >
+                  <img
+                    src={companionFigureSrc[companionCategory]}
+                    alt={`${companionCategory}搭子头像`}
+                    className={getChatAvatarClassName(companionCategory)}
+                    draggable={false}
+                  />
                 </div>
               ) : null}
               <div
@@ -114,9 +157,12 @@ export function ChatPanel({ embedded = false }: { embedded?: boolean }) {
           </IconButton>
 
           <PrimaryButton
-            onClick={() => {
-              sendMessage(voiceMode ? "刚刚这段语音先帮我转成文字了。" : draft);
+            onClick={async () => {
+              const text = voiceMode ? "刚刚这段语音先帮我转成文字了。" : draft;
+              if (!text.trim()) return;
+
               setDraft("");
+              await sendMessage(text);
             }}
             className="h-14 px-6"
             style={{ background: theme.palette.panelActive }}
@@ -127,6 +173,29 @@ export function ChatPanel({ embedded = false }: { embedded?: boolean }) {
       </div>
     </GlassCard>
   );
+
+  async function startCall(callType: "voice" | "video") {
+    const label = callType === "voice" ? "语音通话" : "视频通话";
+    if (!userId) {
+      setCallStatus(`${label}已进入本地演示模式，后端连接后会写入通话记录。`);
+      return;
+    }
+
+    try {
+      const call = await apiClient.createCall(userId, callType);
+      setCallStatus(`${label}已${call.status === "connected" ? "接通" : "发起"}，后端通话记录已创建。`);
+    } catch {
+      setCallStatus(`${label}暂时无法连接后端，已保留前端演示状态。`);
+    }
+  }
+}
+
+function getChatAvatarClassName(category: CompanionCategory) {
+  if (category === "萌宠") {
+    return "h-full w-full scale-110 object-cover object-center";
+  }
+
+  return "h-full w-full scale-[1.2] object-cover object-[50%_18%]";
 }
 
 function resolveChatTone(): "light" | "dark" {

@@ -27,7 +27,7 @@ export function PlansPanel() {
     <div className="grid h-full min-h-0 grid-cols-[0.95fr_1.05fr] gap-5 overflow-hidden">
       <div className="flex min-h-0 flex-col gap-5 overflow-hidden">
         <GlassCard className="flex min-h-0 flex-1 flex-col p-5">
-          <SectionTitle title="今日任务" subtitle="本地 mock，后续接 AI 推送。" />
+          <SectionTitle title="今日任务" subtitle="优先读取后端今日计划；服务不可用时使用本地兜底。" />
           <div className="scrollbar-thin mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
             {tasks.map((task) => (
               <SoftCard key={task.id} className="p-3 shadow-none">

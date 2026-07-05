@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { GlassCard, PrimaryButton, SecondaryButton, SectionTitle, Tag } from "@/components/common/ui";
 import { buildProfileFromDraft, useAppStore } from "@/store/use-app-store";
-import { companionArchetypes, companionCategories, genderOptions, getCompanionTheme, type CompanionArchetype } from "@/types/domain";
+import { companionArchetypes, companionCategories, companionFigureSrc, genderOptions, getCompanionTheme, type CompanionArchetype } from "@/types/domain";
 
 export function OnboardingForm() {
+  const navigate = useNavigate();
   const draft = useAppStore((state) => state.onboardingDraft);
   const updateDraft = useAppStore((state) => state.updateOnboardingDraft);
   const completeOnboarding = useAppStore((state) => state.completeOnboarding);
@@ -12,10 +14,11 @@ export function OnboardingForm() {
   const theme = getCompanionTheme(draft.companion.category, draft.gender);
   const [currentStep, setCurrentStep] = useState<OnboardingStep>("category");
 
-  const submit = () => {
+  const submit = async () => {
     const profile = buildProfileFromDraft(draft);
     if (!profile) return;
-    completeOnboarding(profile);
+    await completeOnboarding(profile);
+    navigate("/workspace", { replace: true });
   };
 
   const isValid = Boolean(draft.currentWeight && draft.heightInCentimeters);
@@ -62,10 +65,16 @@ export function OnboardingForm() {
                 </div>
               </div>
               <div
-                className="flex size-24 shrink-0 items-center justify-center rounded-full text-4xl font-black text-white"
-                style={{ background: theme.palette.orb, boxShadow: theme.palette.orbGlow }}
+                className="relative h-44 w-32 shrink-0 overflow-hidden rounded-[30px] border xl:h-52 xl:w-40"
+                style={{ borderColor: theme.palette.shellCardBorder, background: theme.palette.stageCardBg, boxShadow: theme.palette.orbGlow }}
               >
-                {draft.companion.category === "帅哥" ? "型" : draft.companion.category === "美女" ? "魅" : "萌"}
+                <div className="absolute inset-x-3 bottom-0 top-10 rounded-full opacity-30 blur-xl" style={{ background: theme.palette.orb }} />
+                <img
+                  src={companionFigureSrc[draft.companion.category]}
+                  alt={`${draft.companion.category}搭子半身图`}
+                  className={draft.companion.category === "萌宠" ? "relative h-full w-full scale-110 object-cover object-center" : "relative h-full w-full object-contain object-bottom"}
+                  draggable={false}
+                />
               </div>
             </div>
           </div>
@@ -342,7 +351,14 @@ export function OnboardingForm() {
             <div className="max-w-[280px] text-sm leading-6 text-slate-500">
               {!isValid ? "至少需要填写体重和身高，才能生成更合理的初始计划。" : "信息足够了，可以直接进入横版工作台。"}
             </div>
-            <SecondaryButton onClick={skipOnboarding}>先用默认档案体验</SecondaryButton>
+            <SecondaryButton
+              onClick={async () => {
+                await skipOnboarding();
+                navigate("/workspace", { replace: true });
+              }}
+            >
+              先用默认档案体验
+            </SecondaryButton>
           </div>
         </div>
       </GlassCard>

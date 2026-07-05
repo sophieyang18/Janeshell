@@ -1,57 +1,40 @@
-# React + TypeScript + Vite
+# 简贝 Web 前端
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+横版 React/Vite 前端。开发环境默认通过 Vite proxy 连接本地后端：
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+http://127.0.0.1:8000
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+前端代码默认请求同源 `/api` 和 `/health`，`vite.config.ts` 会转发到 `http://127.0.0.1:8000`，避免开发端口变化导致 CORS 问题。如需覆盖后端地址：
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  extends: [
-    // other configs...
-    // Enable lint rules for React
-    reactX.configs['recommended-typescript'],
-    // Enable lint rules for React DOM
-    reactDom.configs.recommended,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+VITE_JANESHELL_API_BASE_URL=http://127.0.0.1:8000 npm run dev
 ```
+
+后端不可用时，前端会自动回退到本地 mock，保证界面仍可预览。
+
+## 常用命令
+
+```bash
+npm run dev
+npm run check
+npm run lint
+npm run test
+npm run build
+```
+
+## 后端接入点
+
+当前前端优先使用 `/api/v1/web` 适配层：
+
+- `POST /api/v1/web/profile/default`
+- `GET /api/v1/web/users/{user_id}/bootstrap`
+- `POST /api/v1/web/users/{user_id}/chat/messages`
+
+同时直接接入：
+
+- `POST /api/v1/profile`
+- `POST /api/v1/users/{user_id}/companion/interactions`
+- `POST /api/v1/users/{user_id}/companion/gifts`
+- `PATCH /api/v1/users/{user_id}/plans/tasks/{task_id}`

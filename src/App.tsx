@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { useAppStore } from "@/store/use-app-store";
@@ -14,6 +15,12 @@ function RootRedirect() {
 }
 
 export default function App() {
+  const bootstrapFromBackend = useAppStore((state) => state.bootstrapFromBackend);
+
+  useEffect(() => {
+    void bootstrapFromBackend();
+  }, [bootstrapFromBackend]);
+
   return (
     <BrowserRouter>
       <Routes>

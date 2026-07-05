@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# App static assets that should stay versioned
+!public/companions/
+!public/companions/**
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
