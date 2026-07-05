@@ -1,0 +1,82 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Outfit:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --bg: 28 29% 94%;
+    --card: 0 0% 100%;
+    --card-soft: 18 33% 90%;
+    --muted: 219 14% 48%;
+    --line: 24 19% 86%;
+    --ink: 222 29% 12%;
+    --brand: 139 46% 45%;
+    --brand-strong: 139 49% 36%;
+    --brand-soft: 110 26% 88%;
+    --lavender: 267 48% 91%;
+    --sand: 23 41% 91%;
+  }
+
+  html {
+    @apply bg-transparent;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Outfit", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: hsl(var(--ink));
+    background:
+      radial-gradient(circle at top left, rgba(238, 247, 238, 0.9), transparent 26%),
+      radial-gradient(circle at top right, rgba(249, 232, 230, 0.9), transparent 22%),
+      linear-gradient(135deg, rgba(250, 245, 242, 1), rgba(244, 239, 245, 1));
+    height: 100%;
+    overflow: hidden;
+  }
+
+  #root {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: "Noto Serif SC", "STSong", serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply rounded-[28px] border border-white/50 bg-white/80 shadow-[0_24px_70px_rgba(38,38,38,0.08)] backdrop-blur-xl;
+  }
+
+  .soft-card {
+    @apply rounded-[24px] border border-white/60 bg-white/70 shadow-[0_14px_44px_rgba(29,29,29,0.06)];
+  }
+
+  .pill-button {
+    @apply inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+}
+
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
