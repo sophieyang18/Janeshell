@@ -2,14 +2,14 @@ export type MainView = "workspace" | "chat" | "records" | "plans";
 
 export type CompanionCategory = "帅哥" | "美女" | "萌宠";
 
-export type MaleArchetype = "肌肉男教练" | "青春男大" | "霸总" | "破碎感帅哥";
-export type FemaleArchetype = "性感学姐" | "可爱学妹" | "性感女上司" | "性感主妇" | "贴心秘书";
-export type PetArchetype = "熊" | "狗" | "猫" | "兔子" | "刺猬" | "熊猫" | "仓鼠";
+export type MaleArchetype = "明星" | "暖心同事" | "破碎感帅哥" | "篮球队队长" | "肌肉男教练" | "贤夫良父" | "酷帅学长" | "青春男大" | "黑涩会老大";
+export type FemaleArchetype = "学妹" | "性感学姐" | "性感秘书" | "虚拟idol" | "贤妻良母";
+export type PetArchetype = "仓鼠" | "兔子" | "小狗" | "小猫" | "熊" | "熊猫";
 export type CompanionArchetype = MaleArchetype | FemaleArchetype | PetArchetype;
 
 export type GenderOption = "女" | "男" | "非二元" | "暂不说明";
 
-export type RecordType = "体重" | "用餐" | "运动";
+export type RecordType = "体重" | "用餐" | "运动" | "经期" | "排便" | "饮水";
 
 export type TaskCategory = "饮食" | "运动" | "情绪" | "打卡";
 
@@ -119,14 +119,21 @@ export interface OnboardingDraft {
 export const companionCategories: CompanionCategory[] = ["帅哥", "美女", "萌宠"];
 
 export const companionArchetypes: Record<CompanionCategory, CompanionArchetype[]> = {
-  帅哥: ["肌肉男教练", "青春男大", "霸总", "破碎感帅哥"],
-  美女: ["性感学姐", "可爱学妹", "性感女上司", "性感主妇", "贴心秘书"],
-  萌宠: ["熊", "狗", "猫", "兔子", "刺猬", "熊猫", "仓鼠"],
+  帅哥: ["明星", "暖心同事", "破碎感帅哥", "篮球队队长", "肌肉男教练", "贤夫良父", "酷帅学长", "青春男大", "黑涩会老大"],
+  美女: ["学妹", "性感学姐", "性感秘书", "虚拟idol", "贤妻良母"],
+  萌宠: ["仓鼠", "兔子", "小狗", "小猫", "熊", "熊猫"],
 };
+
+export function getSafeCompanionArchetype(category: CompanionCategory, archetype?: string | null): CompanionArchetype {
+  const options = companionArchetypes[category];
+  const matched = options.find((option) => option === archetype);
+
+  return matched ?? options[0];
+}
 
 export const genderOptions: GenderOption[] = ["女", "男", "非二元", "暂不说明"];
 
-export const recordTypes: RecordType[] = ["体重", "用餐", "运动"];
+export const recordTypes: RecordType[] = ["体重", "用餐", "运动", "饮水"];
 
 export const companionPanels: CompanionPanel[] = ["聊天", "调戏", "送礼物", "查看属性"];
 
@@ -135,6 +142,72 @@ export const companionFigureSrc: Record<CompanionCategory, string> = {
   美女: "/companions/female.jpeg",
   萌宠: "/companions/pet.png",
 };
+
+export const companionArchetypeFigureSrc: Record<CompanionArchetype, string> = {
+  明星: "/companions/archetypes/male/明星/cover.jpeg",
+  暖心同事: "/companions/archetypes/male/暖心同事/cover.jpg",
+  破碎感帅哥: "/companions/archetypes/male/破碎感帅哥/cover.jpg",
+  篮球队队长: "/companions/archetypes/male/篮球队队长/cover.jpg",
+  肌肉男教练: "/companions/archetypes/male/肌肉男教练/cover.jpg",
+  贤夫良父: "/companions/archetypes/male/贤夫良父/cover.jpg",
+  酷帅学长: "/companions/archetypes/male/酷帅学长/cover.jpg",
+  青春男大: "/companions/archetypes/male/青春男大/cover.jpg",
+  黑涩会老大: "/companions/archetypes/male/黑涩会老大/cover.jpg",
+  学妹: "/companions/archetypes/female/学妹/cover.jpeg",
+  性感学姐: "/companions/archetypes/female/性感学姐/cover.jpg",
+  性感秘书: "/companions/archetypes/female/性感秘书/cover.jpg",
+  虚拟idol: "/companions/archetypes/female/虚拟idol/cover.jpg",
+  贤妻良母: "/companions/archetypes/female/贤妻良母/cover.jpg",
+  仓鼠: "/companions/archetypes/pet/仓鼠/cover.png",
+  兔子: "/companions/archetypes/pet/兔子/cover.png",
+  小狗: "/companions/archetypes/pet/小狗/cover.png",
+  小猫: "/companions/archetypes/pet/小猫/cover.png",
+  熊: "/companions/archetypes/pet/熊/cover.png",
+  熊猫: "/companions/archetypes/pet/熊猫/cover.png",
+};
+
+export function getCompanionFigureSrc(companion?: Pick<CompanionSetup, "category" | "archetype"> | null) {
+  if (!companion) return companionFigureSrc.帅哥;
+
+  const archetype = getSafeCompanionArchetype(companion.category, companion.archetype);
+
+  return companionArchetypeFigureSrc[archetype] ?? companionFigureSrc[companion.category];
+}
+
+export const companionSceneSrc: Record<CompanionCategory, string> = {
+  帅哥: "/companions/scenes/with_bg_1/male/男明星.png",
+  美女: "/companions/scenes/with_bg_1/female/idol.png",
+  萌宠: "/companions/scenes/with_bg_1/pet/小狗.png",
+};
+
+export const companionArchetypeSceneSrc: Partial<Record<CompanionArchetype, string>> = {
+  明星: "/companions/scenes/with_bg_1/male/男明星.png",
+  暖心同事: "/companions/scenes/with_bg_1/male/暖心同事.png",
+  破碎感帅哥: "/companions/scenes/with_bg_1/male/破碎文艺男.png",
+  篮球队队长: "/companions/scenes/with_bg_1/male/篮球队队长.png",
+  肌肉男教练: "/companions/scenes/with_bg_1/male/健身教练.png",
+  贤夫良父: "/companions/scenes/with_bg_1/male/贤夫良夫.png",
+  酷帅学长: "/companions/scenes/with_bg_1/male/酷帅学长.png",
+  青春男大: "/companions/scenes/with_bg_1/male/青春男大.png",
+  黑涩会老大: "/companions/scenes/with_bg_1/male/霸道总裁.png",
+  学妹: "/companions/scenes/with_bg_1/female/青春学妹.png",
+  性感学姐: "/companions/scenes/with_bg_1/female/性感学姐.png",
+  性感秘书: "/companions/scenes/with_bg_1/female/性感秘书.png",
+  虚拟idol: "/companions/scenes/with_bg_1/female/idol.png",
+  贤妻良母: "/companions/scenes/with_bg_1/female/贤妻良母.png",
+  兔子: "/companions/scenes/with_bg_1/pet/兔子.png",
+  小狗: "/companions/scenes/with_bg_1/pet/小狗.png",
+  小猫: "/companions/scenes/with_bg_1/pet/小猫.png",
+  熊猫: "/companions/scenes/with_bg_1/pet/熊猫.png",
+};
+
+export function getCompanionSceneSrc(companion?: Pick<CompanionSetup, "category" | "archetype"> | null) {
+  if (!companion) return companionSceneSrc.帅哥;
+
+  const archetype = getSafeCompanionArchetype(companion.category, companion.archetype);
+
+  return companionArchetypeSceneSrc[archetype] ?? companionSceneSrc[companion.category];
+}
 
 export const defaultOnboardingDraft: OnboardingDraft = {
   companion: {
@@ -172,130 +245,57 @@ export const placeholderProfile: UserProfile = {
   preferences: "更希望温柔提醒，不喜欢太强硬。",
 };
 
+const pinkBluePalette: CompanionTheme["palette"] = {
+  background:
+    "linear-gradient(135deg, rgba(255,201,230,0.98), rgba(183,221,255,0.98) 48%, rgba(214,204,255,0.96))",
+  orb: "linear-gradient(135deg, #ff86c5, #75baff)",
+  orbGlow: "0 30px 94px rgba(117,186,255,0.32)",
+  foreground: "#172554",
+  foregroundMuted: "rgba(23,37,84,0.72)",
+  tagBg: "rgba(255,255,255,0.62)",
+  tagText: "#2563eb",
+  panelActive: "linear-gradient(135deg, #ff7abd, #68b4ff)",
+  panelIdle: "rgba(255,255,255,0.68)",
+  panelIdleText: "#315fba",
+  accentSoft: "rgba(255,255,255,0.64)",
+  accentText: "#315fba",
+  summaryGlow: "rgba(117,186,255,0.28)",
+  shellCardBg: "rgba(255,255,255,0.58)",
+  shellCardBorder: "rgba(255,255,255,0.72)",
+  shellText: "#172554",
+  shellMutedText: "rgba(23,37,84,0.66)",
+  stageCardBg: "rgba(255,255,255,0.56)",
+  stageMetaText: "rgba(23,37,84,0.54)",
+  stageBodyText: "rgba(23,37,84,0.82)",
+  previewCardBg: "rgba(255,255,255,0.62)",
+  previewText: "#172554",
+  previewMutedText: "rgba(23,37,84,0.66)",
+};
+
 export const companionThemes: Record<CompanionCategory, CompanionTheme> = {
   帅哥: {
     id: "帅哥",
-    heroLabel: "少女粉漫画系",
-    heroTitle: "樱粉心动馆",
-    heroDescription: "明亮少女粉底色，像清爽漫画男主陪你打卡，甜感更足但不油腻。",
-    palette: {
-      background: "linear-gradient(135deg, rgba(255,232,244,0.98), rgba(255,207,229,0.96) 42%, rgba(255,238,247,0.94))",
-      orb: "linear-gradient(135deg, #ff8fc7, #ff6fab)",
-      orbGlow: "0 30px 90px rgba(255,111,171,0.30)",
-      foreground: "#5a2140",
-      foregroundMuted: "rgba(90,33,64,0.72)",
-      tagBg: "rgba(255,255,255,0.68)",
-      tagText: "#c22572",
-      panelActive: "linear-gradient(135deg, #ff8fc7, #ec5f9d)",
-      panelIdle: "rgba(255,255,255,0.66)",
-      panelIdleText: "#b02c6b",
-      accentSoft: "rgba(255,255,255,0.62)",
-      accentText: "#b02c6b",
-      summaryGlow: "rgba(255,111,171,0.22)",
-      shellCardBg: "rgba(255,255,255,0.54)",
-      shellCardBorder: "rgba(255,255,255,0.68)",
-      shellText: "#5a2140",
-      shellMutedText: "rgba(90,33,64,0.66)",
-      stageCardBg: "rgba(255,255,255,0.54)",
-      stageMetaText: "rgba(90,33,64,0.52)",
-      stageBodyText: "rgba(90,33,64,0.80)",
-      previewCardBg: "rgba(255,255,255,0.58)",
-      previewText: "#5a2140",
-      previewMutedText: "rgba(90,33,64,0.66)",
-    },
+    heroLabel: "粉蓝渐变陪伴系",
+    heroTitle: "粉蓝搭子空间",
+    heroDescription: "柔和粉蓝渐变底色，清爽、轻盈、适合专注搭子和记录本身。",
+    palette: pinkBluePalette,
   },
   美女: {
     id: "美女",
-    heroLabel: "紫晶二次元系",
-    heroTitle: "紫夜次元屋",
-    heroDescription: "明亮紫色底色，像番剧女主陪你完成每日计划，梦幻、轻甜、有记忆点。",
-    palette: {
-      background: "linear-gradient(135deg, rgba(244,232,255,0.98), rgba(220,198,255,0.96) 44%, rgba(239,220,255,0.94))",
-      orb: "linear-gradient(135deg, #b084ff, #8b5cf6)",
-      orbGlow: "0 30px 92px rgba(139,92,246,0.30)",
-      foreground: "#3d2368",
-      foregroundMuted: "rgba(61,35,104,0.72)",
-      tagBg: "rgba(255,255,255,0.66)",
-      tagText: "#6d3fc2",
-      panelActive: "linear-gradient(135deg, #b084ff, #7c3aed)",
-      panelIdle: "rgba(255,255,255,0.64)",
-      panelIdleText: "#6740a8",
-      accentSoft: "rgba(255,255,255,0.60)",
-      accentText: "#6740a8",
-      summaryGlow: "rgba(139,92,246,0.22)",
-      shellCardBg: "rgba(255,255,255,0.52)",
-      shellCardBorder: "rgba(255,255,255,0.66)",
-      shellText: "#3d2368",
-      shellMutedText: "rgba(61,35,104,0.66)",
-      stageCardBg: "rgba(255,255,255,0.52)",
-      stageMetaText: "rgba(61,35,104,0.52)",
-      stageBodyText: "rgba(61,35,104,0.80)",
-      previewCardBg: "rgba(255,255,255,0.56)",
-      previewText: "#3d2368",
-      previewMutedText: "rgba(61,35,104,0.66)",
-    },
+    heroLabel: "粉蓝渐变陪伴系",
+    heroTitle: "粉蓝搭子空间",
+    heroDescription: "柔和粉蓝渐变底色，清爽、轻盈、适合专注搭子和记录本身。",
+    palette: pinkBluePalette,
   },
   萌宠: {
     id: "萌宠",
-    heroLabel: "暖黄治愈系",
-    heroTitle: "奶黄打卡屋",
-    heroDescription: "明亮黄色底色，轻松、柔软、有陪跑感，像被暖阳和小搭子一起提醒。",
-    palette: {
-      background: "linear-gradient(135deg, rgba(255,246,207,0.98), rgba(255,225,129,0.96) 48%, rgba(255,240,181,0.94))",
-      orb: "linear-gradient(135deg, #ffd166, #f5a524)",
-      orbGlow: "0 30px 90px rgba(245,165,36,0.28)",
-      foreground: "#5a3b00",
-      foregroundMuted: "rgba(90,59,0,0.72)",
-      tagBg: "rgba(255,255,255,0.64)",
-      tagText: "#b56b00",
-      panelActive: "linear-gradient(135deg, #ffd166, #f5a524)",
-      panelIdle: "rgba(255,255,255,0.62)",
-      panelIdleText: "#96610a",
-      accentSoft: "rgba(255,255,255,0.58)",
-      accentText: "#96610a",
-      summaryGlow: "rgba(245,165,36,0.22)",
-      shellCardBg: "rgba(255,255,255,0.52)",
-      shellCardBorder: "rgba(255,255,255,0.66)",
-      shellText: "#5a3b00",
-      shellMutedText: "rgba(90,59,0,0.66)",
-      stageCardBg: "rgba(255,255,255,0.52)",
-      stageMetaText: "rgba(90,59,0,0.52)",
-      stageBodyText: "rgba(90,59,0,0.80)",
-      previewCardBg: "rgba(255,255,255,0.56)",
-      previewText: "#5a3b00",
-      previewMutedText: "rgba(90,59,0,0.66)",
-    },
+    heroLabel: "粉蓝渐变陪伴系",
+    heroTitle: "粉蓝搭子空间",
+    heroDescription: "柔和粉蓝渐变底色，清爽、轻盈、适合专注搭子和记录本身。",
+    palette: pinkBluePalette,
   },
 };
 
-const femaleUserMaleCompanionTheme: CompanionTheme = {
-  ...companionThemes.帅哥,
-  heroLabel: "少女粉漫画系",
-  heroTitle: "樱粉心动馆",
-  heroDescription: "明亮少女粉底色，更像清爽漫画男主陪你打卡，甜感更足但不油腻。",
-  palette: {
-    ...companionThemes.帅哥.palette,
-    background: "linear-gradient(135deg, rgba(255,235,246,0.98), rgba(255,204,229,0.96) 45%, rgba(255,240,249,0.94))",
-    orb: "linear-gradient(135deg, #ff9ed1, #ff6faf)",
-    orbGlow: "0 28px 86px rgba(255,111,175,0.26)",
-  },
-};
-
-const maleUserFemaleCompanionTheme: CompanionTheme = {
-  ...companionThemes.美女,
-  heroLabel: "紫晶二次元陪伴系",
-  heroTitle: "紫夜次元屋",
-  heroDescription: "明亮紫色底色，更像番剧里的专属女主角陪你打卡，梦幻感和记忆点更强。",
-  palette: {
-    ...companionThemes.美女.palette,
-    background: "linear-gradient(135deg, rgba(244,232,255,0.98), rgba(213,190,255,0.96) 42%, rgba(236,219,255,0.94))",
-    orb: "linear-gradient(135deg, #b084ff, #8b5cf6)",
-    orbGlow: "0 30px 92px rgba(139,92,246,0.30)",
-  },
-};
-
-export function getCompanionTheme(category: CompanionCategory, gender?: GenderOption): CompanionTheme {
-  if (gender === "女" && category === "帅哥") return femaleUserMaleCompanionTheme;
-  if (gender === "男" && category === "美女") return maleUserFemaleCompanionTheme;
+export function getCompanionTheme(category: CompanionCategory, _gender?: GenderOption): CompanionTheme {
   return companionThemes[category];
 }

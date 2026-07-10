@@ -8,6 +8,7 @@ import {
 } from "@/types/domain";
 
 const API_BASE_URL = (import.meta.env.VITE_JANESHELL_API_BASE_URL ?? "").replace(/\/$/, "");
+const REQUEST_TIMEOUT_MS = 30000;
 
 export type BackendStatus = "idle" | "connected" | "offline";
 
@@ -60,6 +61,19 @@ export interface BackendGiftResponse {
   attributes: BackendCompanionAttributes;
 }
 
+export interface CalorieDetectionResult {
+  detected_foods: string[];
+  total_calories_kcal: number;
+  macros: {
+    protein_g: number;
+    carbs_g: number;
+    fat_g: number;
+  };
+  confidence: number;
+  provider: string;
+  explain: string;
+}
+
 interface BackendDailyPlan {
   tasks: Array<{
     id: string;
@@ -68,6 +82,13 @@ interface BackendDailyPlan {
     task_type: "food" | "exercise" | "record" | "emotion";
     is_completed: boolean;
   }>;
+}
+
+export interface QuickRecordDraft {
+  date: string;
+  value: string;
+  secondaryValue: string;
+  note: string;
 }
 
 export const apiClient = {
@@ -133,70 +154,73 @@ export const apiClient = {
     );
   },
 
-  async createQuickRecord(userId: string, type: RecordEntry["type"], mode: string, value: string, profile: UserProfile | null) {
-    const today = new Date().toISOString().slice(0, 10);
-    const source = mode === "拍照上传" || mode === "从相册导入" ? "photo" : "manual";
-    const trimmed = value.trim();
-
-    if (type === "体重") {
-      return request<unknown>(`/api/v1/users/${encodeURIComponent(userId)}/records/weight`, {
-        method: "POST",
-        body: JSON.stringify({
-          date: today,
-          weight_kg: Number(trimmed) || profile?.currentWeight || 62,
-          source,
-          note: `${mode}录入`,
-        }),
-      });
-    }
-
-    if (type === "用餐") {
-      return request<unknown>(`/api/v1/users/${encodeURIComponent(userId)}/records/meals`, {
-        method: "POST",
-        body: JSON.stringify({
-          date: today,
-          meal_type: "dinner",
-          foods: [trimmed || "用餐记录"],
-          calories_kcal: Number(trimmed) || 520,
-          protein_g: 28,
-          carbs_g: 48,
-          fat_g: 18,
-          source,
-          note: `${mode}录入`,
-        }),
-      });
-    }
-
-    return request<unknown>(`/api/v1/users/${encodeURIComponent(userId)}/records/exercises`, {
+  async detectCalories(userId: string, imageBase64: string, description: string) {
+    return request<CalorieDetectionResult>(`/api/v1/users/${encodeURIComponent(userId)}/detections/calories`, {
       method: "POST",
       body: JSON.stringify({
-        date: today,
-        exercise_type: trimmed || "快走",
-        duration_minutes: Number(trimmed) || 30,
-        calories_burned_kcal: 180,
-        intensity: "moderate",
+        image_base64: imageBase64,
+        description,
+      }),
+    });
+  },
+
+  async createQuickRecord(
+    userId: string,
+    type: RecordEntry["type"],
+    mode: string,
+    draft: QuickRecordDraft,
+    profile: UserProfile | null,
+  ) {
+    const source = mode === "手动录入" ? "manual" : "photo";
+    const value = draft.value.trim();
+    const secondaryValue = draft.secondaryValue.trim();
+    const note = draft.note.trim();
+
+    return request<unknown>(`/api/v1/users/${encodeURIComponent(userId)}/records/quick`, {
+      method: "POST",
+      body: JSON.stringify({
+        record_type: type,
+        date: draft.date || new Date().toISOString().slice(0, 10),
+        mode,
+        value: value || getDefaultQuickRecordValue(type, profile),
+        secondary_value: secondaryValue,
+        note,
         source,
-        note: `${mode}录入`,
       }),
     });
   },
 };
 
+function getDefaultQuickRecordValue(type: RecordEntry["type"], profile: UserProfile | null) {
+  if (type === "体重") return String(profile?.currentWeight || 62);
+  if (type === "用餐") return "用餐记录";
+  if (type === "运动") return "快走";
+  return "500";
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `request failed: ${response.status}`);
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...init.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `request failed: ${response.status}`);
+    }
+
+    return response.json() as Promise<T>;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-
-  return response.json() as Promise<T>;
 }
 
 function toBackendProfile(profile: UserProfile) {

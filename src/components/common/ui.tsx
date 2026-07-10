@@ -35,7 +35,7 @@ export function Tag({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700",
+        "inline-flex items-center rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700",
         className,
       )}
       style={style}
@@ -84,7 +84,7 @@ export function PrimaryButton({
   return (
     <button
       className={cn(
-        "pill-button bg-emerald-600 px-5 py-3 text-white shadow-[0_18px_30px_rgba(22,163,74,0.24)] hover:bg-emerald-700",
+        "pill-button bg-[linear-gradient(135deg,#ff7abd,#68b4ff)] px-5 py-3 text-white shadow-[0_18px_30px_rgba(117,186,255,0.26)]",
         className,
       )}
       {...props}
@@ -102,7 +102,7 @@ export function SecondaryButton({
   return (
     <button
       className={cn(
-        "pill-button border border-emerald-100 bg-emerald-50 px-5 py-3 text-emerald-700 hover:bg-emerald-100",
+        "pill-button border border-blue-100 bg-blue-50 px-5 py-3 text-blue-700 hover:bg-pink-50",
         className,
       )}
       {...props}
@@ -115,7 +115,7 @@ export function SecondaryButton({
 export function StatCard({
   label,
   value,
-  accent = "bg-emerald-50 text-emerald-700",
+  accent = "bg-blue-50 text-blue-700",
 }: {
   label: string;
   value: string;
@@ -132,7 +132,7 @@ export function StatCard({
 export function ProgressBar({ value }: { value: number }) {
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-      <div className="h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: `${value}%` }} />
+      <div className="h-full rounded-full bg-[linear-gradient(135deg,#ff7abd,#68b4ff)] transition-[width]" style={{ width: `${value}%` }} />
     </div>
   );
 }

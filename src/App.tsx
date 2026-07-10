@@ -7,11 +7,12 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import PlansPage from "@/pages/PlansPage";
 import RecordsPage from "@/pages/RecordsPage";
+import WelcomePage from "@/pages/WelcomePage";
 import WorkspacePage from "@/pages/WorkspacePage";
 
 function RootRedirect() {
   const profile = useAppStore((state) => state.profile);
-  return <Navigate to={profile ? "/workspace" : "/onboarding"} replace />;
+  return <Navigate to={profile ? "/workspace" : "/welcome"} replace />;
 }
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<RootRedirect />} />
+        <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/workspace" element={<WorkspacePage />} />
         <Route path="/chat" element={<ChatPage />} />

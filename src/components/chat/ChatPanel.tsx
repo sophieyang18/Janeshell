@@ -4,7 +4,7 @@ import { Camera, Mic, Phone, Smile, Video } from "lucide-react";
 import { GlassCard, PrimaryButton, SectionTitle, Tag } from "@/components/common/ui";
 import { useAppStore } from "@/store/use-app-store";
 import { apiClient } from "@/services/api";
-import { companionFigureSrc, getCompanionTheme, type CompanionCategory } from "@/types/domain";
+import { getCompanionFigureSrc, getCompanionTheme, type CompanionCategory } from "@/types/domain";
 
 const quickEmoji = ["🥺", "😭", "😤", "💪", "🥗", "🏃", "🔥", "🫶"];
 
@@ -83,7 +83,7 @@ export function ChatPanel({ embedded = false }: { embedded?: boolean }) {
                   style={{ borderColor: theme.palette.shellCardBorder, background: theme.palette.stageCardBg }}
                 >
                   <img
-                    src={companionFigureSrc[companionCategory]}
+                    src={getCompanionFigureSrc(profile?.companion)}
                     alt={`${companionCategory}搭子头像`}
                     className={getChatAvatarClassName(companionCategory)}
                     draggable={false}

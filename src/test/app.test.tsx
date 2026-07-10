@@ -30,11 +30,12 @@ describe("简贝 Web 应用", () => {
     });
   });
 
-  it("未建档时会进入建档页", () => {
+  it("未建档时会进入欢迎页", () => {
     window.history.pushState({}, "", "/");
     render(<App />);
 
-    expect(screen.getByText("开始建档")).toBeInTheDocument();
+    expect(screen.getByText("简贝帮你定制一个最懂你的专属AI减肥搭子！")).toBeInTheDocument();
+    expect(screen.getByText("开始定制搭子")).toBeInTheDocument();
   });
 
   it("已建档时能看到横版工作台", () => {
@@ -44,6 +45,6 @@ describe("简贝 Web 应用", () => {
     render(<App />);
 
     expect(screen.getByText("简贝横版工作台")).toBeInTheDocument();
-    expect(screen.getByText("阿简")).toBeInTheDocument();
+    expect(screen.getByText("重新建档")).toBeInTheDocument();
   });
 });

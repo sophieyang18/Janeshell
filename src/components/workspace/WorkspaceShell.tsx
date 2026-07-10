@@ -8,13 +8,16 @@ import { PlansPanel } from "@/components/plans/PlansPanel";
 import { RecordsPanel } from "@/components/records/RecordsPanel";
 import { useAppStore } from "@/store/use-app-store";
 import {
-  companionFigureSrc,
   companionPanels,
+  getCompanionFigureSrc,
+  getCompanionSceneSrc,
   getCompanionTheme,
+  recordTypes,
   type CompanionCategory,
   type CompanionPanel,
   type CompanionProfile,
   type CompanionTheme,
+  type RecordType,
 } from "@/types/domain";
 
 function resolveSectionTone(): "light" | "dark" {
@@ -43,7 +46,9 @@ export function WorkspaceShell({ view = "workspace" }: { view?: "workspace" | "c
   }
 
   if (view === "records") {
-    return <FocusedPageLayout title="记录中心" subtitle="体重、用餐、运动都在这里做横版浏览。"><RecordsPanel /></FocusedPageLayout>;
+    const focusType = getRecordTypeFromSearch(location.search);
+    const initialMode = getRecordModeFromSearch(location.search);
+    return <FocusedPageLayout title="记录中心" subtitle="体重、用餐、运动、饮水都在这里做横版浏览。"><RecordsPanel focusType={focusType} initialMode={initialMode} /></FocusedPageLayout>;
   }
 
   if (view === "plans") {
@@ -71,7 +76,7 @@ export function WorkspaceShell({ view = "workspace" }: { view?: "workspace" | "c
             <nav className="flex gap-1 rounded-full p-1.5" style={{ border: `1px solid ${theme.palette.shellCardBorder}`, background: theme.palette.previewCardBg }}>
               <TopNavLink to="/workspace" active={currentNav === "workspace"} icon={<Sparkles className="size-4" />} label="主页" description="主页：查看搭子主形象、实时通知、互动入口和今日状态。" align="left" />
               <TopNavLink to="/chat" active={currentNav === "chat"} icon={<MessageCircleMore className="size-4" />} label="聊天" description="聊天：进入完整对话区，支持文字、语音占位、表情和通话入口。" />
-              <TopNavLink to="/records" active={currentNav === "records"} icon={<NotebookTabs className="size-4" />} label="记录" description="记录：浏览体重、用餐、运动日历和最近打卡内容。" />
+              <TopNavLink to="/records" active={currentNav === "records"} icon={<NotebookTabs className="size-4" />} label="记录" description="记录：浏览体重、用餐、运动、饮水日历和最近打卡内容。" />
               <TopNavLink to="/plans" active={currentNav === "plans"} icon={<StickyNote className="size-4" />} label="计划" description="计划：查看后端生成的今日饮食、运动、情绪和打卡任务。" align="right" />
             </nav>
             <div
@@ -140,9 +145,11 @@ function CompanionStage({
   const profile = useAppStore((state) => state.profile);
   const theme = getCompanionTheme(profile?.companion.category ?? "帅哥", profile?.gender);
   const companionCategory = profile?.companion.category ?? "帅哥";
+  const companionFigureSrc = getCompanionFigureSrc(profile?.companion);
+  const companionSceneSrc = getCompanionSceneSrc(profile?.companion);
   return (
     <GlassCard
-      className="grid h-full min-h-0 grid-cols-[88px_minmax(0,1fr)_196px] gap-4 overflow-hidden p-4 shadow-[0_24px_70px_rgba(9,14,28,0.18)] xl:grid-cols-[112px_minmax(0,1fr)_248px] xl:gap-5 xl:p-5"
+      className="relative grid h-full min-h-0 grid-cols-[88px_minmax(0,1fr)_220px] gap-4 overflow-hidden p-4 shadow-[0_24px_70px_rgba(9,14,28,0.18)] xl:grid-cols-[112px_minmax(0,1fr)_280px] xl:gap-5 xl:p-5"
       style={{ borderColor: theme.palette.shellCardBorder, background: theme.palette.shellCardBg }}
     >
       <div className="grid min-h-0 grid-rows-4 gap-3">
@@ -168,34 +175,16 @@ function CompanionStage({
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_46%_22%,rgba(255,255,255,0.34),transparent_34%)]" />
         {selectedPanel === "聊天" ? (
-          <div className="relative grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
-            <div className="grid min-h-0 grid-cols-[minmax(190px,0.82fr)_minmax(0,1fr)] items-center gap-7 overflow-hidden xl:grid-cols-[minmax(280px,0.72fr)_minmax(0,1fr)] xl:gap-10">
-              <CompanionFigure category={companionCategory} theme={theme} />
-
-              <div className="min-h-0 min-w-0 overflow-hidden">
-                <div className="inline-flex max-w-full rounded-full px-4 py-2 text-xs font-bold tracking-[0.18em]" style={{ background: theme.palette.tagBg, color: theme.palette.tagText }}>
-                  <span className="truncate">{theme.heroLabel}</span>
-                </div>
-                <div
-                  className="mt-5 max-w-full truncate text-[clamp(3.75rem,7vw,7.5rem)] font-black leading-[1.08]"
-                  style={{ color: theme.palette.foreground }}
-                >
-                  {companionProfile.name}
-                </div>
-                <div className="mt-4 max-w-[780px] truncate text-base font-semibold leading-7 xl:text-xl xl:leading-8" style={{ color: theme.palette.stageMetaText }}>
-                  {companionProfile.summary}
-                </div>
-                <div className="mt-5 max-w-[760px] text-base leading-7 line-clamp-2 xl:text-xl xl:leading-9" style={{ color: theme.palette.stageBodyText }}>
-                  {companionProfile.moodLine}
-                </div>
-              </div>
+          <div className="relative grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden">
+            <div className="min-h-0 overflow-hidden">
+              <InteractiveCompanionScene category={companionCategory} src={companionSceneSrc} theme={theme} />
             </div>
 
             <PanelInteraction selectedPanel={selectedPanel} companionProfile={companionProfile} theme={theme} />
           </div>
         ) : (
           <div className="relative grid h-full min-h-0 grid-cols-[minmax(180px,0.62fr)_minmax(0,1fr)] items-stretch gap-6 overflow-hidden xl:grid-cols-[minmax(260px,0.58fr)_minmax(0,1fr)] xl:gap-8">
-            <CompanionFigure category={companionCategory} theme={theme} compact={selectedPanel === "查看属性"} />
+            <CompanionFigure category={companionCategory} src={companionFigureSrc} theme={theme} compact={selectedPanel === "查看属性"} />
             <PanelInteraction selectedPanel={selectedPanel} companionProfile={companionProfile} theme={theme} />
           </div>
         )}
@@ -208,10 +197,12 @@ function CompanionStage({
 
 function CompanionFigure({
   category,
+  src,
   theme,
   compact = false,
 }: {
   category: CompanionCategory;
+  src: string;
   theme: CompanionTheme;
   compact?: boolean;
 }) {
@@ -223,13 +214,82 @@ function CompanionFigure({
       >
         <div className="absolute inset-x-4 bottom-0 top-10 rounded-full opacity-30 blur-2xl" style={{ background: theme.palette.orb }} />
         <img
-          src={companionFigureSrc[category]}
+          src={src}
           alt={`${category}搭子半身图`}
           className={getFigureClassName(category)}
           draggable={false}
         />
       </div>
     </div>
+  );
+}
+
+function InteractiveCompanionScene({
+  category,
+  src,
+  theme,
+}: {
+  category: CompanionCategory;
+  src: string;
+  theme: CompanionTheme;
+}) {
+  return (
+    <div className="relative h-full min-h-0 w-full min-w-0 overflow-hidden rounded-[34px] border" style={{ borderColor: theme.palette.shellCardBorder, background: theme.palette.stageCardBg, boxShadow: theme.palette.orbGlow }}>
+      <img
+        src={src}
+        alt={`${category}搭子横版场景占位图`}
+        className="absolute inset-0 h-full w-full object-cover object-[50%_18%]"
+        draggable={false}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.70),rgba(255,255,255,0.22)_36%,rgba(255,255,255,0.34)_68%,rgba(255,255,255,0.76)),linear-gradient(180deg,rgba(255,255,255,0.34),transparent_42%,rgba(15,23,42,0.08))]" />
+      <div className="pointer-events-none absolute inset-x-10 bottom-5 h-24 rounded-[50%] opacity-50 blur-3xl" style={{ background: theme.palette.orb }} />
+
+      <div className="absolute left-5 top-5 z-20 max-w-[46%] rounded-[26px] border px-4 py-3 shadow-[0_18px_45px_rgba(15,23,42,0.13)] backdrop-blur-xl xl:left-7 xl:top-7" style={{ borderColor: theme.palette.shellCardBorder, background: theme.palette.previewCardBg }}>
+        <div className="text-xs font-black tracking-[0.18em]" style={{ color: theme.palette.tagText }}>INTERACTIVE SCENE</div>
+        <div className="mt-1 truncate text-xl font-black xl:text-2xl" style={{ color: theme.palette.previewText }}>阿简的减脂房间</div>
+        <div className="mt-1 line-clamp-1 text-xs font-semibold xl:text-sm" style={{ color: theme.palette.previewMutedText }}>
+          点击场景物件，直接进入对应记录日历。
+        </div>
+      </div>
+
+      <SceneHotspot label="体重秤" detail="记录体重" icon="⚖" type="体重" className="left-[7%] top-[40%]" theme={theme} />
+      <SceneHotspot label="跑步机" detail="记录运动" icon="🏃" type="运动" className="right-[8%] top-[24%]" theme={theme} />
+      <SceneHotspot label="意大利面" detail="记录用餐" icon="🍝" type="用餐" className="left-[18%] bottom-[12%]" theme={theme} />
+      <SceneHotspot label="饮水机" detail="记录饮水" icon="💧" type="饮水" className="right-[18%] bottom-[13%]" theme={theme} />
+    </div>
+  );
+}
+
+function SceneHotspot({
+  label,
+  detail,
+  icon,
+  type,
+  className,
+  theme,
+}: {
+  label: string;
+  detail: string;
+  icon: string;
+  type: RecordType;
+  className: string;
+  theme: CompanionTheme;
+}) {
+  return (
+    <Link
+      to={`/records?type=${encodeURIComponent(type)}`}
+      className={`group absolute z-30 min-w-[92px] rounded-[24px] border px-3 py-2.5 text-left shadow-[0_18px_48px_rgba(15,23,42,0.16)] backdrop-blur-xl transition hover:-translate-y-1.5 hover:scale-[1.03] xl:min-w-[118px] ${className}`}
+      style={{ borderColor: theme.palette.shellCardBorder, background: theme.palette.previewCardBg, color: theme.palette.previewText }}
+      aria-label={`${label}，${detail}`}
+    >
+      <div className="flex items-center gap-2">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl text-lg shadow-inner" style={{ background: theme.palette.accentSoft }}>{icon}</span>
+        <div className="min-w-0">
+          <div className="truncate text-xs font-black xl:text-sm">{label}</div>
+          <div className="truncate text-[11px] font-semibold" style={{ color: theme.palette.previewMutedText }}>{detail}</div>
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -249,10 +309,10 @@ function PanelInteraction({
 
   if (selectedPanel === "聊天") {
     return (
-      <div className="relative mt-5 flex min-h-[112px] items-center justify-between gap-5 rounded-[26px] px-5 py-4 xl:min-h-[124px] xl:rounded-[28px] xl:px-7" style={{ background: theme.palette.previewCardBg }}>
+      <div className="relative flex min-h-[80px] items-center justify-between gap-5 rounded-[26px] px-5 py-2.5 xl:min-h-[88px] xl:rounded-[28px] xl:px-7" style={{ background: theme.palette.previewCardBg }}>
         <div className="min-w-0">
           <div className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: theme.palette.previewMutedText }}>阿简正在说</div>
-          <div className="mt-2 text-lg font-semibold leading-7 line-clamp-2 xl:text-2xl xl:leading-8" style={{ color: theme.palette.previewText }}>{resolveSpeech(selectedPanel)}</div>
+          <div className="mt-1.5 text-base font-semibold leading-6 line-clamp-2 xl:text-xl xl:leading-7" style={{ color: theme.palette.previewText }}>{resolveSpeech(selectedPanel)}</div>
         </div>
         <Link to="/chat" className="pill-button hidden shrink-0 px-6 py-3 xl:inline-flex" style={{ background: theme.palette.panelActive, color: "#ffffff" }}>
           进入聊天
@@ -430,11 +490,11 @@ function NotificationRail() {
 
   return (
     <aside
-      className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-[26px] border p-4 xl:rounded-[30px] xl:p-5"
+      className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[26px] border p-4 xl:rounded-[30px] xl:p-5"
       style={{ borderColor: theme.palette.shellCardBorder, background: theme.palette.previewCardBg, color: theme.palette.shellText }}
     >
       <div>
-        <div className="text-base font-black leading-6">实时通知</div>
+        <div className="text-base font-black leading-6">消息综合</div>
         <div className="mt-1 text-xs leading-5 line-clamp-2" style={{ color: theme.palette.previewMutedText }}>
           只保留和今天相关的信息
         </div>
@@ -446,6 +506,22 @@ function NotificationRail() {
             <div className="mt-1 line-clamp-2 text-sm font-semibold leading-5" style={{ color: theme.palette.previewText }}>{notice.detail}</div>
           </div>
         ))}
+      </div>
+      <div className="mt-4 grid gap-2">
+        <Link
+          to="/records?type=%E4%BD%93%E9%87%8D&mode=manual"
+          className="rounded-[18px] px-3 py-3 text-sm font-black transition hover:-translate-y-0.5"
+          style={{ background: theme.palette.panelActive, color: "#ffffff" }}
+        >
+          体重手动写入
+        </Link>
+        <Link
+          to="/records?type=%E7%94%A8%E9%A4%90&mode=image"
+          className="rounded-[18px] px-3 py-3 text-sm font-black transition hover:-translate-y-0.5"
+          style={{ background: theme.palette.accentSoft, color: theme.palette.previewText }}
+        >
+          拍照识别饮食
+        </Link>
       </div>
     </aside>
   );
@@ -498,6 +574,19 @@ function resolveSpeech(panel: CompanionPanel) {
   if (panel === "调戏") return "要摸摸头、捏脸还是拥抱？我都记账。";
   if (panel === "送礼物") return "你今天已经被我夸过一次了，再送礼的话我会更认真盯你打卡。";
   return "这些数值后面可以和任务完成度、聊天频次、礼物、情绪陪伴联动。";
+}
+
+function getRecordTypeFromSearch(search: string): RecordType {
+  const value = new URLSearchParams(search).get("type");
+  const matched = recordTypes.find((type) => type === value);
+
+  return matched ?? "体重";
+}
+
+function getRecordModeFromSearch(search: string): "manual" | "image" | null {
+  const value = new URLSearchParams(search).get("mode");
+  if (value === "manual" || value === "image") return value;
+  return null;
 }
 
 function getFigureClassName(category: CompanionCategory) {

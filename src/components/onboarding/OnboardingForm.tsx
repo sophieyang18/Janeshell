@@ -3,20 +3,41 @@ import { useNavigate } from "react-router-dom";
 
 import { GlassCard, PrimaryButton, SecondaryButton, SectionTitle, Tag } from "@/components/common/ui";
 import { buildProfileFromDraft, useAppStore } from "@/store/use-app-store";
-import { companionArchetypes, companionCategories, companionFigureSrc, genderOptions, getCompanionTheme, type CompanionArchetype } from "@/types/domain";
+import {
+  companionArchetypes,
+  companionArchetypeFigureSrc,
+  companionCategories,
+  genderOptions,
+  getCompanionFigureSrc,
+  getCompanionTheme,
+  getSafeCompanionArchetype,
+  type CompanionArchetype,
+  type CompanionCategory,
+} from "@/types/domain";
 
 export function OnboardingForm() {
   const navigate = useNavigate();
-  const draft = useAppStore((state) => state.onboardingDraft);
+  const rawDraft = useAppStore((state) => state.onboardingDraft);
   const updateDraft = useAppStore((state) => state.updateOnboardingDraft);
   const completeOnboarding = useAppStore((state) => state.completeOnboarding);
   const skipOnboarding = useAppStore((state) => state.skipOnboarding);
+  const draft = {
+    ...rawDraft,
+    companion: {
+      ...rawDraft.companion,
+      archetype: getSafeCompanionArchetype(rawDraft.companion.category, rawDraft.companion.archetype),
+    },
+  };
   const theme = getCompanionTheme(draft.companion.category, draft.gender);
   const [currentStep, setCurrentStep] = useState<OnboardingStep>("category");
+  const [isEntering, setIsEntering] = useState(false);
 
   const submit = async () => {
+    if (isEntering) return;
+
     const profile = buildProfileFromDraft(draft);
     if (!profile) return;
+    setIsEntering(true);
     await completeOnboarding(profile);
     navigate("/workspace", { replace: true });
   };
@@ -24,6 +45,21 @@ export function OnboardingForm() {
   const isValid = Boolean(draft.currentWeight && draft.heightInCentimeters);
   const stepOrder: OnboardingStep[] = ["category", "companion", "required", "optional"];
   const currentStepIndex = stepOrder.indexOf(currentStep);
+  const currentExampleIndex = companionExamples.findIndex((example) => example.category === draft.companion.category);
+
+  const applyCompanionExample = (example: CompanionExample) => {
+    updateDraft({
+      companion: {
+        ...draft.companion,
+        category: example.category,
+        archetype: example.archetype,
+        customName: example.name,
+        profession: example.identity,
+        persona: example.persona,
+        personality: example.personality,
+      },
+    });
+  };
 
   return (
     <div className="mx-auto grid h-[100dvh] max-w-[1680px] grid-cols-[0.82fr_1.18fr] gap-5 overflow-hidden p-5">
@@ -36,13 +72,13 @@ export function OnboardingForm() {
               className="border backdrop-blur-md"
               style={{ borderColor: theme.palette.shellCardBorder, background: theme.palette.tagBg, color: theme.palette.tagText }}
             >
-              减脂教练 & 搭子定制台
+              减肥搭子定制台
             </Tag>
             <h1 className="max-w-3xl text-[clamp(30px,2.8vw,44px)] font-black leading-[1.18]" style={{ color: theme.palette.foreground }}>
-              先选你想要谁陪你减脂，再决定这个人该怎么和你说话。
+              定制你的专属搭子
             </h1>
             <p className="max-w-2xl text-sm leading-6" style={{ color: theme.palette.foregroundMuted }}>
-              创建一个长期陪你记录、提醒和复盘的减脂搭子。先把类型、人设和你的基础信息分步定下来。
+              好的搭子，是减肥成功的一半
             </p>
           </div>
 
@@ -53,14 +89,13 @@ export function OnboardingForm() {
             <div className="flex items-center justify-between gap-5">
               <div className="min-w-0">
                 <div>
-                  <div className="text-sm uppercase tracking-[0.24em]" style={{ color: theme.palette.previewMutedText }}>{theme.heroLabel}</div>
-                  <div className="mt-2 truncate text-2xl font-black" style={{ color: theme.palette.previewText }}>{draft.companion.customName || "未命名搭子"}</div>
+                  <div className="mt-2 truncate text-2xl font-black" style={{ color: theme.palette.previewText }}>{draft.companion.customName || "萧晗"}</div>
+                  <div className="mt-1 text-sm font-semibold" style={{ color: theme.palette.previewMutedText }}>{draft.companion.profession || "偶像"}</div>
                 </div>
                 <div className="mt-3 rounded-[22px] p-4" style={{ background: theme.palette.accentSoft, color: theme.palette.previewText }}>
                   <div className="text-lg font-semibold">{draft.companion.archetype}</div>
-                  <div className="mt-1 text-sm leading-6">{draft.companion.profession || "职业待设定"}</div>
-                  <div className="mt-2 line-clamp-2 text-sm leading-6" style={{ color: theme.palette.previewMutedText }}>
-                    {draft.companion.persona || "人设会影响主页文案和陪伴语气。"}
+                  <div className="mt-2 line-clamp-3 text-sm leading-6" style={{ color: theme.palette.previewMutedText }}>
+                    {draft.companion.persona || "嘴硬王者但心很软，光芒万丈但只给你专属的温柔。"}
                   </div>
                 </div>
               </div>
@@ -70,9 +105,9 @@ export function OnboardingForm() {
               >
                 <div className="absolute inset-x-3 bottom-0 top-10 rounded-full opacity-30 blur-xl" style={{ background: theme.palette.orb }} />
                 <img
-                  src={companionFigureSrc[draft.companion.category]}
+                  src={getCompanionFigureSrc(draft.companion)}
                   alt={`${draft.companion.category}搭子半身图`}
-                  className={draft.companion.category === "萌宠" ? "relative h-full w-full scale-110 object-cover object-center" : "relative h-full w-full object-contain object-bottom"}
+                  className={draft.companion.category === "萌宠" ? "relative h-full w-full scale-110 object-cover object-center" : "relative h-full w-full scale-110 object-cover object-[50%_18%]"}
                   draggable={false}
                 />
               </div>
@@ -81,18 +116,18 @@ export function OnboardingForm() {
 
           <div className="flex items-center justify-between gap-6">
             <div className="max-w-md text-sm leading-6" style={{ color: theme.palette.foregroundMuted }}>
-              {theme.heroDescription}
+              减肥？简贝！最懂你的专属AI减肥搭子！
             </div>
             <div className="flex gap-2">
-              {stepOrder.map((step, index) => (
+              {companionExamples.map((example, index) => (
                 <button
-                  key={step}
-                  onClick={() => setCurrentStep(step)}
-                  aria-label={stepLabels[step]}
+                  key={example.name}
+                  onClick={() => applyCompanionExample(example)}
+                  aria-label={example.label}
                   className="size-2.5 rounded-full transition"
-                  style={{ background: currentStep === step ? theme.palette.tagText : theme.palette.foregroundMuted }}
+                  style={{ background: currentExampleIndex === index ? theme.palette.tagText : theme.palette.foregroundMuted }}
                 >
-                  <span className="sr-only">{index + 1}. {stepLabels[step]}</span>
+                  <span className="sr-only">{index + 1}. {example.label}</span>
                 </button>
               ))}
             </div>
@@ -102,7 +137,13 @@ export function OnboardingForm() {
 
       <GlassCard className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)_auto] p-6" delay={0.12}>
         <div className="flex items-center justify-between gap-6">
-          <SectionTitle title="开始建档" subtitle={`${currentStepIndex + 1}/4 · ${stepDescriptions[currentStep]}`} />
+          <SectionTitle title="建立搭子和个人档案" subtitle={`${currentStepIndex + 1}/4 · ${stepDescriptions[currentStep]}`} />
+            <button
+              onClick={() => navigate("/welcome")}
+              className="shrink-0 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-500 transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900"
+            >
+              返回欢迎页
+            </button>
         </div>
 
         <div className="mt-5 flex items-center gap-2 rounded-full bg-slate-100 p-1">
@@ -127,11 +168,11 @@ export function OnboardingForm() {
             {currentStep === "category" ? (
               <div className="grid h-full grid-rows-[auto_1fr] gap-4">
                 <div>
-                    <div className="text-lg font-semibold text-slate-900">选择搭子类型</div>
-                    <div className="mt-1 text-sm leading-6 text-slate-500">先定风格，再定人设，最后填你的基础资料。</div>
+                    <div className="text-lg font-semibold text-slate-900">选择你的搭子类型：</div>
+                    <div className="mt-1 text-sm leading-6 text-slate-500">先选一个你最想被陪伴的方向。</div>
                 </div>
-                <div className="grid min-h-0 grid-rows-[auto_1fr] gap-4">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid min-h-0">
+                    <div className="grid min-h-0 grid-cols-3 gap-4">
                     {companionCategories.map((category) => (
                       <button
                         key={category}
@@ -144,42 +185,53 @@ export function OnboardingForm() {
                             },
                           })
                         }
-                        className={`rounded-[22px] border px-4 py-3.5 text-left transition ${
+                          className={`grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] rounded-[26px] border px-4 py-4 text-center transition ${
                           draft.companion.category === category
-                            ? "border-slate-900 bg-slate-950 text-white shadow-lg"
-                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                              ? "border-slate-900 bg-slate-950 text-white shadow-[0_22px_60px_rgba(15,23,42,0.20)]"
+                              : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_18px_45px_rgba(15,23,42,0.10)]"
                         }`}
                       >
-                        <div className="text-base font-semibold">{category}</div>
-                        <div className="mt-1 text-sm leading-5 text-inherit/72">
-                          {category === "帅哥" ? "冷感督促、压迫感更强" : category === "美女" ? "情绪价值更重、氛围更暧昧" : "更治愈、更轻松、陪跑感更强"}
+                          <div className="text-[clamp(24px,2.6vw,34px)] font-black leading-none tracking-[-0.04em]">
+                            {getCategoryDisplayName(category)}
+                          </div>
+                          <div className="mx-auto mt-4 max-w-[180px] text-sm font-semibold leading-6 text-inherit/75">
+                          {category === "帅哥" ? "上天欠你的帅哥我给你" : category === "美女" ? "香香软软的搭子你值得拥有" : "来只毛孩子治愈你"}
                         </div>
+                          <div className="mt-auto grid max-h-[150px] grid-cols-3 justify-items-center gap-2 overflow-hidden rounded-[18px] bg-white/12 p-2">
+                            {companionArchetypes[category].map((archetype) => (
+                              <div
+                                key={archetype}
+                                className="size-10 overflow-hidden rounded-[12px] border border-white/35 bg-white/30 shadow-sm xl:size-11"
+                                title={archetype}
+                              >
+                                <img
+                                  src={companionArchetypeFigureSrc[archetype]}
+                                  alt={archetype}
+                                  className="h-full w-full object-cover"
+                                  draggable={false}
+                                />
+                              </div>
+                            ))}
+                          </div>
                       </button>
                     ))}
-                  </div>
-                    <div className="min-h-0 rounded-[22px] bg-white p-3">
-                    <div className="text-sm font-semibold text-slate-900">当前已选</div>
-                    <div className="mt-2 flex items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="text-xl font-black text-slate-950">{draft.companion.category}</div>
-                        <div className="mt-1 line-clamp-2 text-sm leading-6 text-slate-500">{theme.heroDescription}</div>
-                      </div>
-                      <Tag className="shrink-0 bg-white py-1 text-slate-700">{theme.heroTitle}</Tag>
-                    </div>
                   </div>
                 </div>
               </div>
             ) : null}
 
             {currentStep === "companion" ? (
-              <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-4 overflow-hidden">
-                <div className="flex min-w-0 items-center gap-4">
-                  <div className="shrink-0">
-                    <div className="text-lg font-semibold text-slate-900">定制搭子设定</div>
-                    <div className="mt-0.5 text-sm text-slate-500">名字、职业、人设、性格</div>
+              <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-5 overflow-hidden">
+                <div className="grid gap-1">
+                  <div className="min-w-0">
+                    <div className="text-lg font-black text-slate-900">设置搭子人设</div>
+                    <div className="mt-1 text-sm leading-6 text-slate-500">原型、名字、人设和性格会决定搭子的陪伴语气。</div>
                   </div>
-                  <label className="grid min-w-[220px] flex-1 gap-1.5">
-                    <span className="text-xs font-medium text-slate-500">细分原型</span>
+                </div>
+
+                <div className="grid min-h-0 grid-cols-2 grid-rows-[auto_minmax(0,1fr)] gap-4 overflow-hidden rounded-[28px] bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.05)]">
+                  <label className="grid min-h-0 grid-rows-[auto_1fr] gap-2 rounded-[22px] bg-slate-50 p-3">
+                    <span className="text-sm font-black text-slate-700">你的搭子是一个：</span>
                     <select
                       value={draft.companion.archetype}
                       onChange={(event) =>
@@ -190,7 +242,7 @@ export function OnboardingForm() {
                           },
                         })
                       }
-                      className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition focus:border-emerald-500"
+                      className="h-11 min-h-0 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-500"
                     >
                       {companionArchetypes[draft.companion.category].map((archetype) => (
                         <option key={archetype} value={archetype}>
@@ -199,12 +251,10 @@ export function OnboardingForm() {
                       ))}
                     </select>
                   </label>
-                </div>
-
-                <div className="grid min-h-0 grid-cols-2 grid-rows-2 gap-4 overflow-hidden">
                   <CompactInputField
-                    label="搭子名字"
+                      label="你的搭子叫："
                     value={draft.companion.customName}
+                      placeholder="例如：萧晗"
                     onChange={(value) =>
                       updateDraft({
                         companion: {
@@ -214,21 +264,10 @@ export function OnboardingForm() {
                       })
                     }
                   />
-                  <CompactInputField
-                    label="职业"
-                    value={draft.companion.profession}
-                    onChange={(value) =>
-                      updateDraft({
-                        companion: {
-                          ...draft.companion,
-                          profession: value,
-                        },
-                      })
-                    }
-                  />
                   <CompactTextAreaField
-                    label="人设"
+                      label="希望搭子怎么陪伴你："
                     value={draft.companion.persona}
+                      placeholder="例如：嘴硬王者但心很软，光芒万丈但只给你专属的温柔"
                     onChange={(value) =>
                       updateDraft({
                         companion: {
@@ -239,8 +278,9 @@ export function OnboardingForm() {
                     }
                   />
                   <CompactTextAreaField
-                    label="性格"
+                      label="搭子的性格是："
                     value={draft.companion.personality}
+                      placeholder="例如：嘴硬、温柔、会哄人，也会认真盯你执行"
                     onChange={(value) =>
                       updateDraft({
                         companion: {
@@ -258,8 +298,8 @@ export function OnboardingForm() {
               <div className="grid h-full min-h-0 grid-cols-[1fr_1fr] gap-5 overflow-hidden">
                 <div className="space-y-4">
                   <div>
-                    <div className="text-lg font-semibold text-slate-900">填写必填资料</div>
-                    <div className="mt-1 text-sm leading-6 text-slate-500">只保留进入计划生成必须用到的信息。</div>
+                      <div className="text-lg font-semibold text-slate-900">基础资料</div>
+                      <div className="mt-1 text-sm leading-6 text-slate-500">最好把基础信息填完，才能帮你科学减肥哦</div>
                   </div>
                   <InputField label="目前体重 (kg)" value={draft.currentWeight} onChange={(value) => updateDraft({ currentWeight: value })} />
                   <InputField
@@ -288,7 +328,7 @@ export function OnboardingForm() {
                   </div>
 
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-slate-600">出生日期</span>
+                    <span className="text-sm font-medium text-slate-600">破壳日</span>
                     <input
                       type="date"
                       value={draft.birthDate}
@@ -298,7 +338,7 @@ export function OnboardingForm() {
                   </label>
 
                   <div className="rounded-[22px] bg-slate-50 p-4 text-sm leading-6 text-slate-500">
-                    这里只保留生成初始计划真正需要的核心信息。你不需要在一屏里把所有内容都填完。
+                    最好把基础信息填完，才能帮你科学减肥哦
                   </div>
                 </div>
               </div>
@@ -309,15 +349,16 @@ export function OnboardingForm() {
                 <div className="space-y-4">
                   <div>
                     <div className="text-lg font-semibold text-slate-900">补充资料</div>
-                    <div className="mt-1 text-sm leading-6 text-slate-500">这些不阻塞进入产品，所以单独收在最后一步。</div>
+                    <div className="mt-1 text-sm leading-6 text-slate-500">不是必须的，但是填了搭子能更懂你哦～</div>
                   </div>
-                  <InputField label="职业" value={draft.occupation} onChange={(value) => updateDraft({ occupation: value })} />
-                  <InputField label="减脂目标" value={draft.goal} onChange={(value) => updateDraft({ goal: value })} />
+                  <InputField label="职业" value={draft.occupation} placeholder="例如：产品经理 / 学生 / 自由职业" onChange={(value) => updateDraft({ occupation: value })} />
+                  <InputField label="减脂目标" value={draft.goal} placeholder="例如：先瘦 5kg，养成稳定运动习惯" onChange={(value) => updateDraft({ goal: value })} />
                 </div>
                 <div>
                   <TextAreaField
                     label="补充偏好"
                     value={draft.preferences}
+                    placeholder="例如：希望温柔提醒，不喜欢太强硬；晚饭容易失控，需要多监督"
                     rows={5}
                     onChange={(value) => updateDraft({ preferences: value })}
                   />
@@ -341,23 +382,28 @@ export function OnboardingForm() {
                 下一步
               </PrimaryButton>
             ) : (
-              <PrimaryButton onClick={submit} disabled={!isValid} className={!isValid ? "cursor-not-allowed opacity-50" : ""}>
-                进入工作台
+              <PrimaryButton onClick={submit} disabled={!isValid || isEntering} className={!isValid || isEntering ? "cursor-not-allowed opacity-50" : ""}>
+                {isEntering ? "进入中..." : "进入工作台"}
               </PrimaryButton>
             )}
           </div>
 
           <div className="flex items-center justify-between gap-4">
             <div className="max-w-[280px] text-sm leading-6 text-slate-500">
-              {!isValid ? "至少需要填写体重和身高，才能生成更合理的初始计划。" : "信息足够了，可以直接进入横版工作台。"}
+                不想填了，我想直接体验
             </div>
             <SecondaryButton
               onClick={async () => {
+                if (isEntering) return;
+
+                setIsEntering(true);
                 await skipOnboarding();
                 navigate("/workspace", { replace: true });
               }}
+              disabled={isEntering}
+              className={isEntering ? "cursor-not-allowed opacity-50" : ""}
             >
-              先用默认档案体验
+              {isEntering ? "进入中..." : "直接领取默认搭子"}
             </SecondaryButton>
           </div>
         </div>
@@ -371,23 +417,78 @@ type OnboardingStep = "category" | "companion" | "required" | "optional";
 const stepLabels: Record<OnboardingStep, string> = {
   category: "搭子类型",
   companion: "搭子设定",
-  required: "必填资料",
+  required: "基础资料",
   optional: "可选资料",
 };
 
 const stepDescriptions: Record<OnboardingStep, string> = {
-  category: "先定搭子类型和整体风格",
-  companion: "再定名字、职业、人设和性格",
-  required: "填写进入产品必需的基础信息",
-  optional: "最后补充目标和偏好",
+  category: "选择搭子类型",
+  companion: "设置搭子人设",
+  required: "填写个人基础资料",
+  optional: "填写个人可选资料",
 };
 
-function InputField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+type CompanionExample = {
+  label: string;
+  category: CompanionCategory;
+  archetype: CompanionArchetype;
+  name: string;
+  identity: string;
+  persona: string;
+  personality: string;
+};
+
+const companionExamples: CompanionExample[] = [
+  {
+    label: "帅哥_偶像萧晗",
+    category: "帅哥",
+    archetype: "明星",
+    name: "萧晗",
+    identity: "偶像",
+    persona: "嘴硬王者但心很软，光芒万丈但只给你专属的温柔。",
+    personality: "嘴硬、克制、温柔，会把你的每一次坚持都认真记住。",
+  },
+  {
+    label: "美女_学姐严姝",
+    category: "美女",
+    archetype: "性感学姐",
+    name: "严姝",
+    identity: "学姐",
+    persona: "漂亮、清醒、会哄也会管，像校园里只偏爱你的温柔学姐。",
+    personality: "成熟、亲密、会夸人，也会认真提醒你别乱吃。",
+  },
+  {
+    label: "萌宠_小兔叽噗噗",
+    category: "萌宠",
+    archetype: "兔子",
+    name: "噗噗",
+    identity: "小兔叽",
+    persona: "软乎乎的小兔叽，治愈你的焦虑，也陪你把每一天认真过完。",
+    personality: "黏人、治愈、元气满满，会用可爱提醒把你拉回计划。",
+  },
+];
+
+function getCategoryDisplayName(category: CompanionCategory) {
+  return category === "萌宠" ? "宠物" : category;
+}
+
+function InputField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
   return (
     <label className="grid gap-2">
       <span className="text-sm font-medium text-slate-600">{label}</span>
       <input
         value={value}
+        placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         className="h-14 rounded-2xl border border-slate-200 bg-white px-4 outline-none transition focus:border-emerald-500"
       />
@@ -395,27 +496,49 @@ function InputField({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
-function CompactInputField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function CompactInputField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
   return (
-    <label className="grid min-h-0 grid-rows-[auto_1fr] gap-2">
-      <span className="text-sm font-medium text-slate-600">{label}</span>
+      <label className="grid min-h-0 grid-rows-[auto_1fr] gap-2 rounded-[22px] bg-slate-50 p-3">
+        <span className="text-sm font-black text-slate-700">{label}</span>
       <input
         value={value}
+        placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 min-h-0 rounded-2xl border border-slate-200 bg-white px-4 outline-none transition focus:border-emerald-500"
+          className="h-11 min-h-0 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold outline-none transition placeholder:text-slate-300 focus:border-emerald-500"
       />
     </label>
   );
 }
 
-function CompactTextAreaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function CompactTextAreaField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
   return (
-    <label className="grid min-h-0 grid-rows-[auto_1fr] gap-2">
-      <span className="text-sm font-medium text-slate-600">{label}</span>
+      <label className="grid min-h-0 grid-rows-[auto_1fr] gap-2 rounded-[22px] bg-slate-50 p-3">
+        <span className="text-sm font-black text-slate-700">{label}</span>
       <textarea
         value={value}
+        placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-0 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-emerald-500"
+          className="min-h-0 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold leading-6 outline-none transition placeholder:text-slate-300 focus:border-emerald-500"
       />
     </label>
   );
@@ -426,11 +549,13 @@ function TextAreaField({
   value,
   onChange,
   rows = 4,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   rows?: number;
+  placeholder?: string;
 }) {
   return (
     <label className="grid gap-2">
@@ -438,6 +563,7 @@ function TextAreaField({
       <textarea
         rows={rows}
         value={value}
+          placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         className="rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-emerald-500"
       />

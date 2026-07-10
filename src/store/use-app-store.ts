@@ -4,8 +4,10 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import {
   companionPanels,
   defaultOnboardingDraft,
+  getSafeCompanionArchetype,
   placeholderProfile,
   type ChatMessage,
+  type CompanionSetup,
   type CompanionPanel,
   type DailyTask,
   type OnboardingDraft,
@@ -13,7 +15,13 @@ import {
   type CompanionProfile,
   type UserProfile,
 } from "@/types/domain";
-import { apiClient, type BackendCompanionAttributes, type BackendStatus, type WebBootstrapResponse } from "@/services/api";
+import {
+  apiClient,
+  type BackendCompanionAttributes,
+  type BackendStatus,
+  type QuickRecordDraft,
+  type WebBootstrapResponse,
+} from "@/services/api";
 import { createCompanionProfile, createMockTasks, mockMessages, mockRecords } from "@/services/mock-data";
 
 type AppStore = {
@@ -37,7 +45,7 @@ type AppStore = {
   toggleTask: (taskId: string) => Promise<void>;
   interactWithCompanion: (action: string) => Promise<string>;
   sendGiftToCompanion: (giftName: string) => Promise<string>;
-  createQuickRecord: (type: RecordEntry["type"], mode: string, value: string) => Promise<string>;
+  createQuickRecord: (type: RecordEntry["type"], mode: string, draft: QuickRecordDraft) => Promise<string>;
 };
 
 const initialTasks = createMockTasks(null);
@@ -73,32 +81,36 @@ export const useAppStore = create<AppStore>()(
       selectedPanel: companionPanels[0],
       onboardingDraft: defaultOnboardingDraft,
       completeOnboarding: async (profile) => {
-        try {
-          applyBootstrap(set, await apiClient.createProfile(profile));
-        } catch {
-          set({
-            userId: null,
-            chatSessionId: null,
-            backendStatus: "offline",
-            profile,
-            companionProfile: createCompanionProfile(profile),
-            tasks: createMockTasks(profile),
-          });
-        }
+        const normalizedProfile = normalizeProfile(profile);
+        set({
+          userId: null,
+          chatSessionId: null,
+          backendStatus: "idle",
+          profile: normalizedProfile,
+          companionProfile: createCompanionProfile(normalizedProfile),
+          tasks: createMockTasks(normalizedProfile),
+        });
+
+        void apiClient
+          .createProfile(normalizedProfile)
+          .then((bootstrap) => applyBootstrap(set, bootstrap))
+          .catch(() => set({ backendStatus: "offline" }));
       },
       skipOnboarding: async () => {
-        try {
-          applyBootstrap(set, await apiClient.createDefaultProfile());
-        } catch {
-          set({
-            userId: null,
-            chatSessionId: null,
-            backendStatus: "offline",
-            profile: placeholderProfile,
-            companionProfile: createCompanionProfile(placeholderProfile),
-            tasks: createMockTasks(placeholderProfile),
-          });
-        }
+        const normalizedProfile = normalizeProfile(placeholderProfile);
+        set({
+          userId: null,
+          chatSessionId: null,
+          backendStatus: "idle",
+          profile: normalizedProfile,
+          companionProfile: createCompanionProfile(normalizedProfile),
+          tasks: createMockTasks(normalizedProfile),
+        });
+
+        void apiClient
+          .createDefaultProfile()
+          .then((bootstrap) => applyBootstrap(set, bootstrap))
+          .catch(() => set({ backendStatus: "offline" }));
       },
       resetProfile: () =>
         set((state) => ({
@@ -231,15 +243,15 @@ export const useAppStore = create<AppStore>()(
           return `已送出 ${giftName}`;
         }
       },
-      createQuickRecord: async (type, mode, value) => {
+      createQuickRecord: async (type, mode, draft) => {
         const state = get();
-        const title = value.trim() || defaultRecordTitle(type);
+        const title = draft.value.trim() || defaultRecordTitle(type);
         const localRecord: RecordEntry = {
           id: crypto.randomUUID(),
           type,
-          date: new Date().toISOString(),
+          date: new Date(draft.date || new Date()).toISOString(),
           title,
-          note: `${mode}记录已保存。`,
+          note: draft.note.trim() || `${mode}记录已保存。`,
           score: 82,
         };
 
@@ -248,7 +260,7 @@ export const useAppStore = create<AppStore>()(
         if (!state.userId) return `${type}记录已保存到本地。`;
 
         try {
-          await apiClient.createQuickRecord(state.userId, type, mode, value, state.profile);
+          await apiClient.createQuickRecord(state.userId, type, mode, draft, state.profile);
           applyBootstrap(set, await apiClient.bootstrap(state.userId));
           return `${type}记录已写入后端。`;
         } catch {
@@ -283,7 +295,7 @@ function applyBootstrap(
     userId: bootstrap.userId,
     chatSessionId: bootstrap.chatSessionId,
     backendStatus: "connected",
-    profile: bootstrap.profile,
+    profile: normalizeProfile(bootstrap.profile),
     companionProfile: bootstrap.companionProfile,
     records: bootstrap.records,
     tasks: bootstrap.tasks,
@@ -310,19 +322,22 @@ function withAttributes(companionProfile: CompanionProfile, attributes: BackendC
 function defaultRecordTitle(type: RecordEntry["type"]) {
   if (type === "体重") return "今日体重记录";
   if (type === "用餐") return "今日用餐记录";
-  return "今日运动记录";
+  if (type === "运动") return "今日运动记录";
+  return "今日饮水记录";
 }
 
 function draftFromProfile(profile: UserProfile): OnboardingDraft {
+  const normalizedProfile = normalizeProfile(profile);
+
   return {
-    companion: profile.companion,
-    currentWeight: String(profile.currentWeight),
-    heightInCentimeters: String(profile.heightInCentimeters),
-    gender: profile.gender,
-    birthDate: profile.birthDate,
-    occupation: profile.occupation,
-    goal: profile.goal,
-    preferences: profile.preferences,
+    companion: normalizedProfile.companion,
+    currentWeight: String(normalizedProfile.currentWeight),
+    heightInCentimeters: String(normalizedProfile.heightInCentimeters),
+    gender: normalizedProfile.gender,
+    birthDate: normalizedProfile.birthDate,
+    occupation: normalizedProfile.occupation,
+    goal: normalizedProfile.goal,
+    preferences: normalizedProfile.preferences,
   };
 }
 
@@ -335,7 +350,7 @@ export function buildProfileFromDraft(draft: OnboardingDraft): UserProfile | nul
   }
 
   return {
-    companion: draft.companion,
+    companion: normalizeCompanionSetup(draft.companion),
     currentWeight,
     heightInCentimeters,
     gender: draft.gender,
@@ -343,5 +358,19 @@ export function buildProfileFromDraft(draft: OnboardingDraft): UserProfile | nul
     occupation: draft.occupation.trim(),
     goal: draft.goal.trim(),
     preferences: draft.preferences.trim(),
+  };
+}
+
+function normalizeProfile(profile: UserProfile): UserProfile {
+  return {
+    ...profile,
+    companion: normalizeCompanionSetup(profile.companion),
+  };
+}
+
+function normalizeCompanionSetup(companion: CompanionSetup): CompanionSetup {
+  return {
+    ...companion,
+    archetype: getSafeCompanionArchetype(companion.category, companion.archetype),
   };
 }
